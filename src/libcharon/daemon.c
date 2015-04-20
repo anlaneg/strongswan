@@ -482,6 +482,7 @@ static void destroy(private_daemon_t *this)
 	DESTROY_IF(this->kernel_handler);
 	DESTROY_IF(this->public.traps);
 	DESTROY_IF(this->public.shunts);
+	DESTROY_IF(this->public.redirect);
 	DESTROY_IF(this->public.child_sa_manager);
 	DESTROY_IF(this->public.ike_sa_manager);
 	DESTROY_IF(this->public.controller);
@@ -654,6 +655,7 @@ private_daemon_t *daemon_create()
 	this->public.socket = socket_manager_create();
 	this->public.traps = trap_manager_create();
 	this->public.shunts = shunt_manager_create();
+	this->public.redirect = redirect_manager_create();
 	this->kernel_handler = kernel_handler_create();
 
 	return this;
