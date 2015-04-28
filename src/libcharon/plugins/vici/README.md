@@ -281,6 +281,20 @@ Terminates an SA while streaming _control-log_ events.
 		errmsg = <error string on failure or timeout>
 	}
 
+### redirect() ###
+
+Redirect a client-initiated IKE_SA to another gateway. Only for IKEv2.
+
+	{
+		ike = <redirect an IKE_SA by configuration name>
+		ike-id = <redirect an IKE_SA by its unique id>
+		peer-ip = <redirect an IKE_SA with matching peer IP>
+		peer-id = <redirect an IKE_SA with matching peer identity>
+	} => {
+		success = <yes or no>
+		errmsg = <error string on failure>
+	}
+
 ### install() ###
 
 Install a trap, drop or bypass policy defined by a CHILD_SA config.
