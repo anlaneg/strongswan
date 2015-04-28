@@ -1,4 +1,4 @@
-.TH SWANCTL 8 "2014-04-28" "@PACKAGE_VERSION@" "strongSwan"
+.TH SWANCTL 8 "2015-04-28" "@PACKAGE_VERSION@" "strongSwan"
 .SH NAME
 swanctl \- strongSwan configuration, control and monitoring command line interface.
 .SH SYNOPSIS
@@ -40,6 +40,10 @@ initiate a connection
 .B "\-t, \-\-terminate"
 \-\-terminate\fR
 terminate a connection
+.TP
+.B "\-d, \-\-redirect"
+\-\-redirect\fR
+redirect an IKE_SA
 .TP
 .B "\-p, \-\-install"
 install a trap or shunt policy
