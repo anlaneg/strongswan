@@ -801,20 +801,20 @@ static status_t install_policies_internal(private_child_sa_t *this,
  * Delete 3 policies: out, in and forward
  */
 static void del_policies_internal(private_child_sa_t *this,
-		traffic_selector_t *my_ts, traffic_selector_t *other_ts,
-		policy_priority_t priority)
+		host_t *my_addr, host_t *other_addr, traffic_selector_t *my_ts,
+		traffic_selector_t *other_ts, policy_priority_t priority)
 {
 	hydra->kernel_interface->del_policy(hydra->kernel_interface,
-						my_ts, other_ts, POLICY_OUT, this->reqid,
-						this->mark_out, priority);
+						my_addr, other_addr, my_ts, other_ts, POLICY_OUT,
+						this->reqid, this->mark_out, priority);
 	hydra->kernel_interface->del_policy(hydra->kernel_interface,
-						other_ts, my_ts,  POLICY_IN, this->reqid,
-						this->mark_in, priority);
+						other_addr, my_addr, other_ts, my_ts,  POLICY_IN,
+						this->reqid, this->mark_in, priority);
 	if (this->mode != MODE_TRANSPORT)
 	{
 		hydra->kernel_interface->del_policy(hydra->kernel_interface,
-						other_ts, my_ts, POLICY_FWD, this->reqid,
-						this->mark_in, priority);
+						other_addr, my_addr, other_ts, my_ts, POLICY_FWD,
+						this->reqid, this->mark_in, priority);
 	}
 }
 
@@ -1040,8 +1040,8 @@ METHOD(child_sa_t, update, status_t,
 			{
 				traffic_selector_t *old_my_ts = NULL, *old_other_ts = NULL;
 				/* remove old policies first */
-				del_policies_internal(this, my_ts, other_ts,
-									  POLICY_PRIORITY_DEFAULT);
+				del_policies_internal(this, this->my_addr, this->other_addr,
+									  my_ts, other_ts, POLICY_PRIORITY_DEFAULT);
 
 				/* check if we have to update a "dynamic" traffic selector */
 				if (!me->ip_equals(me, this->my_addr) &&
@@ -1069,12 +1069,13 @@ METHOD(child_sa_t, update, status_t,
 				/* update fallback policies after the new policy is in place */
 				if (old_my_ts || old_other_ts)
 				{
-					del_policies_internal(this, old_my_ts ?: my_ts,
+					del_policies_internal(this, this->my_addr, this->other_addr,
+										  old_my_ts ?: my_ts,
 										  old_other_ts ?: other_ts,
 										  POLICY_PRIORITY_FALLBACK);
 					install_policies_internal(this, me, other, my_ts, other_ts,
-								&my_sa, &other_sa, POLICY_DROP,
-								POLICY_PRIORITY_FALLBACK);
+											  &my_sa, &other_sa, POLICY_DROP,
+											  POLICY_PRIORITY_FALLBACK);
 					DESTROY_IF(old_my_ts);
 					DESTROY_IF(old_other_ts);
 				}
@@ -1121,11 +1122,12 @@ METHOD(child_sa_t, destroy, void,
 		enumerator = create_policy_enumerator(this);
 		while (enumerator->enumerate(enumerator, &my_ts, &other_ts))
 		{
-			del_policies_internal(this, my_ts, other_ts, priority);
+			del_policies_internal(this, this->my_addr, this->other_addr,
+								  my_ts, other_ts, priority);
 			if (priority == POLICY_PRIORITY_DEFAULT && require_policy_update())
 			{
-				del_policies_internal(this, my_ts, other_ts,
-									  POLICY_PRIORITY_FALLBACK);
+				del_policies_internal(this, this->my_addr, this->other_addr,
+									my_ts, other_ts, POLICY_PRIORITY_FALLBACK);
 			}
 		}
 		enumerator->destroy(enumerator);

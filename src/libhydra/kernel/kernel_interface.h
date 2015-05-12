@@ -314,6 +314,8 @@ struct kernel_interface_t {
 	 * the reference counter is increased. del_policy() decreases the ref counter
 	 * and removes the policy only when no more references are available.
 	 *
+	 * @param src			source address of SA
+	 * @param dst			dest address of SA
 	 * @param src_ts		traffic selector to match traffic source
 	 * @param dst_ts		traffic selector to match traffic dest
 	 * @param direction		direction of traffic, POLICY_(IN|OUT|FWD)
@@ -323,6 +325,7 @@ struct kernel_interface_t {
 	 * @return				SUCCESS if operation completed
 	 */
 	status_t (*del_policy) (kernel_interface_t *this,
+							host_t *src, host_t *dst,
 							traffic_selector_t *src_ts,
 							traffic_selector_t *dst_ts,
 							policy_dir_t direction, u_int32_t reqid,

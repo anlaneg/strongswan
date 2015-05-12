@@ -150,6 +150,7 @@ static void uninstall_shunt_policy(child_cfg_t *child)
 	enumerator_t *e_my_ts, *e_other_ts;
 	linked_list_t *my_ts_list, *other_ts_list;
 	traffic_selector_t *my_ts, *other_ts;
+	host_t *host_any;
 	policy_priority_t policy_prio;
 	status_t status = SUCCESS;
 
@@ -167,6 +168,7 @@ static void uninstall_shunt_policy(child_cfg_t *child)
 
 	my_ts_list =    child->get_traffic_selectors(child, TRUE,  NULL, NULL);
 	other_ts_list = child->get_traffic_selectors(child, FALSE, NULL, NULL);
+	host_any = host_create_any(AF_INET);
 
 	/* enumerate pairs of traffic selectors */
 	e_my_ts = my_ts_list->create_enumerator(my_ts_list);
@@ -177,26 +179,27 @@ static void uninstall_shunt_policy(child_cfg_t *child)
 		{
 			/* uninstall out policy */
 			status |= hydra->kernel_interface->del_policy(
-							hydra->kernel_interface, my_ts, other_ts,
-							POLICY_OUT, 0, child->get_mark(child, FALSE),
-							policy_prio);
+							hydra->kernel_interface, host_any, host_any,
+							my_ts, other_ts, POLICY_OUT, 0,
+							child->get_mark(child, FALSE), policy_prio);
 
 			/* uninstall in policy */
 			status |= hydra->kernel_interface->del_policy(
-							hydra->kernel_interface, other_ts, my_ts,
-							POLICY_IN, 0, child->get_mark(child, TRUE),
-							policy_prio);
+							hydra->kernel_interface, host_any, host_any,
+							other_ts, my_ts, POLICY_IN, 0,
+							child->get_mark(child, TRUE), policy_prio);
 
 			/* uninstall forward policy */
 			status |= hydra->kernel_interface->del_policy(
-							hydra->kernel_interface, other_ts, my_ts,
-							POLICY_FWD, 0, child->get_mark(child, TRUE),
-							policy_prio);
+							hydra->kernel_interface, host_any, host_any,
+							other_ts, my_ts, POLICY_FWD, 0,
+							child->get_mark(child, TRUE), policy_prio);
 		}
 		e_other_ts->destroy(e_other_ts);
 	}
 	e_my_ts->destroy(e_my_ts);
 
+	host_any->destroy(host_any);
 	my_ts_list->destroy_offset(my_ts_list,
 							   offsetof(traffic_selector_t, destroy));
 	other_ts_list->destroy_offset(other_ts_list,
