@@ -2508,7 +2508,9 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 		enumerator = current->used_by->create_enumerator(current->used_by);
 		while (enumerator->enumerate(enumerator, (void**)&mapping))
 		{
-			if (priority == mapping->priority)
+			if (priority == mapping->priority &&
+				src->ip_equals(src, mapping->sa->src) &&
+				dst->ip_equals(dst, mapping->sa->dst))
 			{
 				current->used_by->remove_at(current->used_by, enumerator);
 				policy_sa_destroy(mapping, &direction, this);
