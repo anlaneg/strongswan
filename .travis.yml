@@ -1,14 +1,10 @@
+sudo: false
+
 language: c
 
 compiler:
   - gcc
   - clang
-
-before_install:
-  - sudo apt-get update -qq
-  - sudo apt-get install -qq bison flex gperf gettext
-  - ./scripts/test.sh deps
-  - ./scripts/test.sh pydeps
 
 script:
   - ./autogen.sh
@@ -42,3 +38,37 @@ matrix:
       env: TEST=win64 MONOLITHIC=yes
     - compiler: gcc
       env: TEST=win32 MONOLITHIC=yes
+
+addons:
+  apt:
+    packages:
+      - bison
+      - flex
+      - gperf
+      - gettext
+      - libgmp-dev
+      - libssl-dev
+      - libgcrypt11-dev
+      - libcurl4-gnutls-dev
+      - libsoup2.4-dev
+      - libunbound-dev
+      - libldns-dev
+      - libmysqlclient-dev
+      - libsqlite3-dev
+      - clearsilver-dev
+      - libfcgi-dev
+      - libnm-glib-dev
+      - libnm-glib-vpn-dev
+      - libpcsclite-dev
+      - libpam0g-dev
+      - binutils-dev
+      - libunwind7-dev
+      - libjson0-dev
+      - iptables-dev
+      - python-pip
+      - gcc-mingw-w64-base
+      - mingw-w64-dev
+      - gcc-mingw-w64-x86-64
+      - binutils-mingw-w64-x86-64
+      - gcc-mingw-w64-i686
+      - binutils-mingw-w64-i686

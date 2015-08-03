@@ -43,6 +43,8 @@ all)
 	fi
 	# not enabled on the build server
 	CONFIG="$CONFIG --disable-af-alg"
+	# FIXME: packages missing
+	CONFIG="$CONFIG --disable-nm"
 	# TODO: enable? perhaps via coveralls.io (cpp-coveralls)?
 	CONFIG="$CONFIG --disable-coverage"
 	DEPS="$DEPS libcurl4-gnutls-dev libsoup2.4-dev libunbound-dev libldns-dev
