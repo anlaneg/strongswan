@@ -14,7 +14,7 @@ check_commands debootstrap mkfs.ext3 partprobe qemu-img qemu-nbd sfdisk
 # package includes/excludes
 INC=automake,autoconf,libtool,bison,flex,gperf,pkg-config,gettext,less
 INC=$INC,build-essential,libgmp-dev,libldap2-dev,libcurl4-openssl-dev,ethtool
-INC=$INC,libxml2-dev,libtspi-dev,libsqlite3-dev,openssh-server,tcpdump,psmisc
+INC=$INC,libxml2-dev,libtspi-dev,libsqlite3-dev,openssh-server,psmisc
 INC=$INC,openssl,vim,sqlite3,conntrack,gdb,cmake,libltdl-dev,liblog4cxx10-dev
 INC=$INC,libboost-thread-dev,libboost-system-dev,git-core,iperf,htop,screen
 INC=$INC,gnat,gprbuild,acpid,acpi-support-base,libldns-dev,libunbound-dev
@@ -24,11 +24,12 @@ INC=$INC,libjson0-dev,libxslt1-dev,libapache2-mod-wsgi,iptables-dev
 case "$BASEIMGSUITE" in
 wheezy)
 	INC=$INC,libxerces-c2-dev,libahven3-dev,libxmlada4.1-dev,libgmpada3-dev
-	INC=$INC,libalog0.4.1-base-dev
+	INC=$INC,libalog0.4.1-base-dev,tcpdump
 	;;
 jessie)
 	INC=$INC,libxerces-c-dev,libahven4-dev,libxmlada5-dev,libgmpada5-dev
 	INC=$INC,libalog1-dev,libgcrypt20-dev
+	BACKPORT=tcpdump
 	;;
 *)
 	echo_warn "Package list for '$BASEIMGSUITE' might has to be updated"
