@@ -105,10 +105,25 @@ Pin-Priority: 1001
 EOF
 log_status $?
 
+if [ -n "$BACKPORT" ]
+then
+	log_action "Enabling $BASEIMGSUITE-backports repo"
+	cat > $LOOPDIR/etc/apt/sources.list.d/backports.list << EOF
+deb $BASEIMGMIRROR $BASEIMGSUITE-backports main
+EOF
+	log_status $?
+fi
+
 log_action "Update package sources"
 execute_chroot "apt-get update"
 log_action "Install packages from custom repo"
 execute_chroot "apt-get -y upgrade"
+
+if [ -n "$BACKPORT" ]
+then
+	log_action "Install packages from $BASEIMGSUITE-backports"
+	execute_chroot "apt-get -y --no-install-recommends -t $BASEIMGSUITE-backports install $BACKPORT"
+fi
 
 for service in $SERVICES
 do
