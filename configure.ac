@@ -270,6 +270,7 @@ ARG_ENABL_SET([radattr],        [enable plugin to inject and process custom RADI
 ARG_ENABL_SET([systime-fix],    [enable plugin to handle cert lifetimes with invalid system time gracefully.])
 ARG_ENABL_SET([test-vectors],   [enable plugin providing crypto test vectors.])
 ARG_DISBL_SET([updown],         [disable updown firewall script plugin.])
+ARG_ENABL_SET([demo],           [enable demo plugin.])
 # programs/components
 ARG_ENABL_SET([aikgen],         [enable AIK generator for TPM 1.2.])
 ARG_ENABL_SET([aikpub2],        [enable AIK extractor for TPM 2.0.])
@@ -1459,6 +1460,7 @@ ADD_PLUGIN([radattr],              [c charon])
 ADD_PLUGIN([uci],                  [c charon])
 ADD_PLUGIN([addrblock],            [c charon])
 ADD_PLUGIN([unity],                [c charon])
+ADD_PLUGIN([demo],                 [c charon])
 
 AC_SUBST(charon_plugins)
 AC_SUBST(starter_plugins)
@@ -1631,6 +1633,7 @@ AM_CONDITIONAL(USE_UNITY, test x$unity = xtrue)
 AM_CONDITIONAL(USE_RESOLVE, test x$resolve = xtrue)
 AM_CONDITIONAL(USE_ATTR, test x$attr = xtrue)
 AM_CONDITIONAL(USE_ATTR_SQL, test x$attr_sql = xtrue)
+AM_CONDITIONAL(USE_DEMO, test x$demo = xtrue)
 
 #  other options
 # ---------------
@@ -1916,6 +1919,7 @@ AC_CONFIG_FILES([
 	src/libcharon/plugins/resolve/Makefile
 	src/libcharon/plugins/attr/Makefile
 	src/libcharon/plugins/attr_sql/Makefile
+	src/libcharon/plugins/demo/Makefile
 	src/libcharon/tests/Makefile
 	src/libtpmtss/Makefile
 	src/libtpmtss/plugins/tpm/Makefile
