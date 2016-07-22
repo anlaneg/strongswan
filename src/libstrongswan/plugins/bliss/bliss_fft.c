@@ -94,20 +94,21 @@ static void butterfly_last(private_bliss_fft_t *this, uint32_t *x, int i1)
 METHOD(bliss_fft_t, transform, void,
 	private_bliss_fft_t *this, uint32_t *a, uint32_t *b, bool inverse)
 {
-	int stage, i, j, k, m, n, t, iw, i_rev;
+	int stage, i, j, k, m, n, s, t, iw, i_rev;
 	uint16_t q;
 	uint32_t tmp;
 
 	/* we are going to use the transform size n and the modulus q a lot */
 	n = this->p->n;
 	q = this->p->q;
+	s = this->p->s;
 
 	if (!inverse)
 	{
 		/* apply linear phase needed for negative wrapped convolution */
 		for (i = 0; i < n; i++)
 		{
-			b[i] = (a[i] * this->p->w[i]) % q;
+			b[i] = (a[i] * this->p->w[s*i]) % q;
 		}
 	}
 	else if (a != b)
@@ -137,7 +138,7 @@ METHOD(bliss_fft_t, transform, void,
 			{
 				for (i = 0; i < m; i++)
 				{
-					iw = 2 * (inverse ? (n - i * k) : (i * k));
+					iw = 2 * s * (inverse ? (n - i * k) : (i * k));
 					butterfly(this, b, t + i, t + i + m, iw);
 				}				
 			}
@@ -167,7 +168,7 @@ METHOD(bliss_fft_t, transform, void,
 	{
 		for (i = 0; i < n; i++)
 		{
-			b[i] = (((b[i] * this->p->w[2*n - i]) % q) * this->p->n_inv) % q;
+			b[i] = (((b[i] * this->p->w[s*(2*n - i)]) % q) * this->p->n_inv) % q;
 		}
 	}
 }
