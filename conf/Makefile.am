@@ -79,6 +79,7 @@ plugins = \
 	plugins/radattr.opt \
 	plugins/random.opt \
 	plugins/resolve.opt \
+	plugins/save-keys.opt \
 	plugins/socket-default.opt \
 	plugins/sql.opt \
 	plugins/stroke.opt \
