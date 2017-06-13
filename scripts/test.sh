@@ -83,7 +83,7 @@ win*)
 	win32)
 		CONFIG="--host=i686-w64-mingw32 $CONFIG"
 		# currently only works on 12.04, so use mingw-w64-dev instead of mingw-w64-i686-dev
-		DEPS="gcc-mingw-w64-i686 binutils-mingw-w64-i686 mingw-w64-dev $DEPS"
+		DEPS="gcc-mingw-w64-i686 binutils-mingw-w64-i686 mingw-w64-i686-dev $DEPS"
 		CC="i686-w64-mingw32-gcc"
 		;;
 	esac

@@ -59,7 +59,6 @@ matrix:
     # TryAcquireSRWLockExclusive in MinGW 3.1.0
     - compiler: gcc
       env: TEST=win32 MONOLITHIC=yes
-      dist: precise
     - compiler: clang
       os: osx
       env: TEST=osx
