@@ -525,6 +525,7 @@ static void log_child_data(child_data_t *data, char *name)
 	DBG2(DBG_CFG, "   interface = %s", cfg->interface);
 	DBG2(DBG_CFG, "   mark_in = %u/%u",
 		 cfg->mark_in.value, cfg->mark_in.mask);
+	DBG2(DBG_CFG, "   mark_in_sa = %u", cfg->options & OPT_MARK_IN_SA);
 	DBG2(DBG_CFG, "   mark_out = %u/%u",
 		 cfg->mark_out.value, cfg->mark_out.mask);
 	DBG2(DBG_CFG, "   inactivity = %llu", cfg->inactivity);
@@ -882,7 +883,7 @@ CALLBACK(parse_opt_fwd_out, bool,
 }
 
 /**
- * Parse OPT_FWD_OUT_POLICIES option
+ * Parse OPT_IPCOMP option
  */
 CALLBACK(parse_opt_ipcomp, bool,
 	child_cfg_option_t *out, chunk_t v)
@@ -906,6 +907,15 @@ CALLBACK(parse_opt_sha256_96, bool,
 	child_cfg_option_t *out, chunk_t v)
 {
 	return parse_option(out, OPT_SHA256_96, v);
+}
+
+/**
+ * Parse OPT_MARK_IN_SA option
+ */
+CALLBACK(parse_opt_mark_in, bool,
+	child_cfg_option_t *out, chunk_t v)
+{
+	return parse_option(out, OPT_MARK_IN_SA, v);
 }
 
 /**
@@ -1562,6 +1572,7 @@ CALLBACK(child_kv, bool,
 		{ "inactivity",			parse_time,			&child->cfg.inactivity				},
 		{ "reqid",				parse_uint32,		&child->cfg.reqid					},
 		{ "mark_in",			parse_mark,			&child->cfg.mark_in					},
+		{ "mark_in_sa",			parse_opt_mark_in,	&child->cfg.options					},
 		{ "mark_out",			parse_mark,			&child->cfg.mark_out				},
 		{ "tfc_padding",		parse_tfc,			&child->cfg.tfc						},
 		{ "priority",			parse_uint32,		&child->cfg.priority				},
