@@ -263,6 +263,7 @@ ARG_ENABL_SET([android-log],    [enable Android specific logger plugin.])
 ARG_ENABL_SET([bypass-lan],     [enable plugin to install bypass policies for local subnets.])
 ARG_ENABL_SET([certexpire],     [enable CSV export of expiration dates of used certificates.])
 ARG_ENABL_SET([connmark],       [enable connmark plugin using conntrack based marks to select return path SA.])
+ARG_ENABL_SET([counters],       [enable plugin that collects several performance counters.])
 ARG_ENABL_SET([forecast],       [enable forecast plugin forwarding broadcast/multicast messages.])
 ARG_ENABL_SET([duplicheck],     [advanced duplicate checking plugin using liveness checks.])
 ARG_ENABL_SET([error-notify],   [enable error notification plugin.])
@@ -473,6 +474,10 @@ fi
 
 if test x$ntru = xtrue -o x$bliss = xtrue; then
 	mgf1=true
+fi
+
+if test x$stroke = xtrue; then
+	counters=true
 fi
 
 # ===========================================
@@ -1471,6 +1476,7 @@ ADD_PLUGIN([radattr],              [c charon])
 ADD_PLUGIN([uci],                  [c charon])
 ADD_PLUGIN([addrblock],            [c charon])
 ADD_PLUGIN([unity],                [c charon])
+ADD_PLUGIN([counters],             [c charon])
 
 AC_SUBST(charon_plugins)
 AC_SUBST(starter_plugins)
@@ -1647,6 +1653,7 @@ AM_CONDITIONAL(USE_UNITY, test x$unity = xtrue)
 AM_CONDITIONAL(USE_RESOLVE, test x$resolve = xtrue)
 AM_CONDITIONAL(USE_ATTR, test x$attr = xtrue)
 AM_CONDITIONAL(USE_ATTR_SQL, test x$attr_sql = xtrue)
+AM_CONDITIONAL(USE_COUNTERS, test x$counters = xtrue)
 
 #  other options
 # ---------------
@@ -1903,6 +1910,7 @@ AC_CONFIG_FILES([
 	src/libcharon/plugins/socket_win/Makefile
 	src/libcharon/plugins/bypass_lan/Makefile
 	src/libcharon/plugins/connmark/Makefile
+	src/libcharon/plugins/counters/Makefile
 	src/libcharon/plugins/forecast/Makefile
 	src/libcharon/plugins/farp/Makefile
 	src/libcharon/plugins/smp/Makefile
