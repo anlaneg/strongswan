@@ -742,6 +742,27 @@ METHOD(task_t, pre_process_i, status_t,
 	enumerator = message->create_payload_enumerator(message);
 	while (enumerator->enumerate(enumerator, &payload))
 	{
+		if (payload->get_type(payload) == PLV2_KEY_EXCHANGE)
+		{
+			if (this->initiator)
+			{
+				ke_payload_t *ke = (ke_payload_t*)payload;
+
+				if (this->dh_group != ke->get_dh_group_number(ke))
+				{	/* ignore messages that contain a KE payload with a DH
+					 * group we didn't propose (could be a delayed response to
+					 * an earlier attempt after receiving an INVALID_KEY_PAYLOAD
+					 * notify if we are retrying with the original proposal) */
+					DBG1(DBG_IKE, "received KE payload for DH group %N but we "
+						 "proposed %N", diffie_hellman_group_names,
+						 ke->get_dh_group_number(ke),
+						 diffie_hellman_group_names, this->dh_group);
+					enumerator->destroy(enumerator);
+					return FAILED;
+				}
+			}
+			continue;
+		}
 		if (payload->get_type(payload) == PLV2_NOTIFY)
 		{
 			notify_payload_t *notify = (notify_payload_t*)payload;
@@ -749,6 +770,25 @@ METHOD(task_t, pre_process_i, status_t,
 
 			switch (type)
 			{
+				case INVALID_KE_PAYLOAD:
+				{
+					diffie_hellman_group_t group;
+					chunk_t data;
+
+					data = notify->get_notification_data(notify);
+					group = ntohs(*((uint16_t*)data.ptr));
+					if (this->dh_group == group)
+					{	/* received a request to switch to the DH group we
+						 * already use, could be a delayed response to an
+						 * earlier request with the wrong group */
+						DBG1(DBG_IKE, "peer requested change to DH group %N "
+							 "that we already use", diffie_hellman_group_names,
+							 this->dh_group);
+						enumerator->destroy(enumerator);
+						return FAILED;
+					}
+					continue;
+				}
 				case REDIRECT:
 				{
 					identification_t *gateway;
