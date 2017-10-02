@@ -105,9 +105,10 @@ static bool parse_signature_auth_data(chunk_t *auth_data, key_type_t *key_type,
  * Build authentication data used for Signature Authentication as per RFC 7427
  */
 static bool build_signature_auth_data(chunk_t *auth_data,
-									  signature_scheme_t scheme)
+									  signature_scheme_t scheme,
+									  void *parameters)
 {
-	chunk_t data;
+	chunk_t data, params = chunk_empty;
 	uint8_t len;
 	int oid;
 
@@ -116,7 +117,19 @@ static bool build_signature_auth_data(chunk_t *auth_data,
 	{
 		return FALSE;
 	}
-	data = asn1_algorithmIdentifier(oid);
+	if (scheme == SIGN_RSA_EMSA_PKCS1_PSS &&
+		!rsa_pss_params_build(parameters, &params))
+	{
+		return FALSE;
+	}
+	if (params.len)
+	{
+		data = asn1_algorithmIdentifier_params(oid, params);
+	}
+	else
+	{
+		data = asn1_algorithmIdentifier(oid);
+	}
 	len = data.len;
 	*auth_data = chunk_cat("cmm", chunk_from_thing(len), data, *auth_data);
 	return TRUE;
@@ -218,10 +231,13 @@ static status_t sign_signature_auth(private_pubkey_authenticator_t *this,
 	keymat_v2_t *keymat;
 	signature_scheme_t scheme = SIGN_UNKNOWN, *schemep;
 	array_t *schemes;
+	rsa_pss_params_t pss;
+	void *params;
 	chunk_t octets = chunk_empty;
 	status_t status = FAILED;
 
 	keymat = (keymat_v2_t*)this->ike_sa->get_keymat(this->ike_sa);
+	/* FIXME: do we need to pass/receive parameters/hash? */
 	schemes = select_signature_schemes(keymat, auth, private);
 	if (!array_count(schemes))
 	{
@@ -230,7 +246,7 @@ static status_t sign_signature_auth(private_pubkey_authenticator_t *this,
 		array_destroy(schemes);
 		return FAILED;
 	}
-
+	/* FIXME: do we need to pass/receive parameters? */
 	if (keymat->get_auth_octets(keymat, FALSE, this->ike_sa_init,
 								this->nonce, id, this->reserved, &octets,
 								schemes))
@@ -239,8 +255,19 @@ static status_t sign_signature_auth(private_pubkey_authenticator_t *this,
 		while (enumerator->enumerate(enumerator, &schemep))
 		{
 			scheme = *schemep;
-			if (private->sign(private, scheme, NULL, octets, auth_data) &&
-				build_signature_auth_data(auth_data, scheme))
+			/* FIXME: should we maybe query the key, if there are restrictions
+			 * in regards to the parameters? or even query the supported schemes
+			 * and parameters? */
+			params = NULL;
+			if (scheme == SIGN_RSA_EMSA_PKCS1_PSS)
+			{	/* FIXME: how to make this algorithm configurable? */
+				pss.hash = HASH_SHA256;
+				pss.mgf1_hash = pss.hash;
+				pss.salt_len = RSA_PSS_SALT_LEN_DEFAULT;
+				params = &pss;
+			}
+			if (private->sign(private, scheme, params, octets, auth_data) &&
+				build_signature_auth_data(auth_data, scheme, params))
 			{
 				status = SUCCESS;
 				break;
