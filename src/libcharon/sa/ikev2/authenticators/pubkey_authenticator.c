@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2008-2015 Tobias Brunner
+ * Copyright (C) 2008-2017 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -23,6 +23,7 @@
 #include <asn1/asn1.h>
 #include <asn1/oid.h>
 #include <collections/array.h>
+#include <credentials/keys/signature_params.h>
 
 typedef struct private_pubkey_authenticator_t private_pubkey_authenticator_t;
 
@@ -61,8 +62,9 @@ struct private_pubkey_authenticator_t {
  * Parse authentication data used for Signature Authentication as per RFC 7427
  */
 static bool parse_signature_auth_data(chunk_t *auth_data, key_type_t *key_type,
-									  signature_scheme_t *scheme)
+									  signature_scheme_t *scheme, void **params)
 {
+	chunk_t parameters = chunk_empty;
 	uint8_t len;
 	int oid;
 
@@ -72,12 +74,27 @@ static bool parse_signature_auth_data(chunk_t *auth_data, key_type_t *key_type,
 	}
 	len = auth_data->ptr[0];
 	*auth_data = chunk_skip(*auth_data, 1);
-	/* we currently don't support schemes that require parameters */
-	oid = asn1_parse_algorithmIdentifier(*auth_data, 1, NULL);
+	oid = asn1_parse_algorithmIdentifier(*auth_data, 1, &parameters);
 	*scheme = signature_scheme_from_oid(oid);
-	if (*scheme == SIGN_UNKNOWN)
+	switch (*scheme)
 	{
-		return FALSE;
+		case  SIGN_UNKNOWN:
+			return FALSE;
+		case SIGN_RSA_EMSA_PKCS1_PSS:
+		{
+			rsa_pss_params_t *pss = malloc_thing(rsa_pss_params_t);
+
+			if (!rsa_pss_params_parse(parameters, 0, pss))
+			{
+				DBG1(DBG_IKE, "failed parsing RSASSA-PSS parameters");
+				free(pss);
+				return FALSE;
+			}
+			*params = pss;
+			break;
+		}
+		default:
+			break;
 	}
 	*key_type = key_type_from_signature_scheme(*scheme);
 	*auth_data = chunk_skip(*auth_data, len);
@@ -257,6 +274,7 @@ static bool get_auth_octets_scheme(private_pubkey_authenticator_t *this,
 	array_t *schemes;
 	bool success = FALSE;
 
+	/* FIXME: do we need to pass/receive parameters? */
 	schemes = array_create(sizeof(signature_scheme_t), 0);
 	array_insert(schemes, ARRAY_TAIL, scheme);
 
@@ -384,6 +402,7 @@ METHOD(authenticator_t, process, status_t,
 	enumerator_t *enumerator;
 	key_type_t key_type = KEY_ECDSA;
 	signature_scheme_t scheme;
+	void *params = NULL;
 	status_t status = NOT_FOUND;
 	const char *reason = "unsupported";
 	bool online;
@@ -411,7 +430,8 @@ METHOD(authenticator_t, process, status_t,
 			scheme = SIGN_ECDSA_521;
 			break;
 		case AUTH_DS:
-			if (parse_signature_auth_data(&auth_data, &key_type, &scheme))
+			if (parse_signature_auth_data(&auth_data, &key_type, &scheme,
+										  &params))
 			{
 				break;
 			}
@@ -425,6 +445,7 @@ METHOD(authenticator_t, process, status_t,
 	id = this->ike_sa->get_other_id(this->ike_sa);
 	if (!get_auth_octets_scheme(this, TRUE, id, &octets, &scheme))
 	{
+		free(params);
 		return FAILED;
 	}
 	auth = this->ike_sa->get_auth_cfg(this->ike_sa, FALSE);
@@ -434,7 +455,7 @@ METHOD(authenticator_t, process, status_t,
 													key_type, id, auth, online);
 	while (enumerator->enumerate(enumerator, &public, &current_auth))
 	{
-		if (public->verify(public, scheme, NULL, octets, auth_data))
+		if (public->verify(public, scheme, params, octets, auth_data))
 		{
 			DBG1(DBG_IKE, "authentication of '%Y' with %N successful", id,
 				 auth_method == AUTH_DS ? signature_scheme_names : auth_method_names,
@@ -457,6 +478,7 @@ METHOD(authenticator_t, process, status_t,
 	}
 	enumerator->destroy(enumerator);
 	chunk_free(&octets);
+	free(params);
 	if (status == NOT_FOUND)
 	{
 		DBG1(DBG_IKE, "no trusted %N public key found for '%Y'",
