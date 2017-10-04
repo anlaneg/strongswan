@@ -1,6 +1,7 @@
-moon::ipsec stop
-sun::ipsec stop
-moon::iptables-restore < /etc/iptables.flush
+moon::swanctl --terminate --ike host-host 2> /dev/null
+moon::service charon stop 2> /dev/null
+sun::service charon stop 2> /dev/null
+mmoon::iptables-restore < /etc/iptables.flush
 sun::iptables-restore < /etc/iptables.flush
 moon::sysctl --pattern net.ipv4.conf.all.rp_filter --system
 sun::sysctl --pattern net.ipv4.conf.all.rp_filter --system
