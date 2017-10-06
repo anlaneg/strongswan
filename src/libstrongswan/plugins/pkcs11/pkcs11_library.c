@@ -943,7 +943,10 @@ METHOD(pkcs11_library_t, get_ck_attribute, bool,
 METHOD(pkcs11_library_t, destroy, void,
 	private_pkcs11_library_t *this)
 {
-	this->public.f->C_Finalize(NULL);
+	if (this->public.f->C_Finalize)
+	{	/* if not already finalized when the slot event job got canceled */
+		this->public.f->C_Finalize(NULL);
+	}
 	dlclose(this->handle);
 	free(this->name);
 	free(this);
