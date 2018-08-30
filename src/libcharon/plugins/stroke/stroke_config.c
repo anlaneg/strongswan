@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2012-2014 Tobias Brunner
  * Copyright (C) 2008 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -519,7 +519,7 @@ static auth_cfg_t *build_auth_cfg(private_stroke_config_t *this,
 		enumerator->destroy(enumerator);
 	}
 
-	/* authentication metod (class, actually) */
+	/* authentication method (class, actually) */
 	if (strpfx(auth, "ike:") ||
 		strpfx(auth, "pubkey") ||
 		strpfx(auth, "rsa") ||

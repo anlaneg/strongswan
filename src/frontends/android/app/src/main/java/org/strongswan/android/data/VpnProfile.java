@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2017 Tobias Brunner
+ * Copyright (C) 2012-2018 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * HSR Hochschule fuer Technik Rapperswil
@@ -30,10 +30,16 @@ public class VpnProfile implements Cloneable
 	/* While storing this as EnumSet would be nicer this simplifies storing it in a database */
 	public static final int SPLIT_TUNNELING_BLOCK_IPV4 = 1;
 	public static final int SPLIT_TUNNELING_BLOCK_IPV6 = 2;
-	public static final int FLAGS_SUPPRESS_CERT_REQS = 1;
+
+	public static final int FLAGS_SUPPRESS_CERT_REQS = 1 << 0;
+	public static final int FLAGS_DISABLE_CRL = 1 << 1;
+	public static final int FLAGS_DISABLE_OCSP = 1 << 2;
+	public static final int FLAGS_STRICT_REVOCATION = 1 << 3;
+	public static final int FLAGS_RSA_PSS = 1 << 4;
 
 	private String mName, mGateway, mUsername, mPassword, mCertificate, mUserCertificate;
 	private String mRemoteId, mLocalId, mExcludedSubnets, mIncludedSubnets, mSelectedApps;
+	private String mIkeProposal, mEspProposal;
 	private Integer mMTU, mPort, mSplitTunneling, mNATKeepAlive, mFlags;
 	private SelectedAppsHandling mSelectedAppsHandling = SelectedAppsHandling.SELECTED_APPS_DISABLE;
 	private VpnType mVpnType;
@@ -112,6 +118,26 @@ public class VpnProfile implements Cloneable
 	public void setVpnType(VpnType type)
 	{
 		this.mVpnType = type;
+	}
+
+	public String getIkeProposal()
+	{
+		return mIkeProposal;
+	}
+
+	public void setIkeProposal(String proposal)
+	{
+		this.mIkeProposal = proposal;
+	}
+
+	public String getEspProposal()
+	{
+		return mEspProposal;
+	}
+
+	public void setEspProposal(String proposal)
+	{
+		this.mEspProposal = proposal;
 	}
 
 	public String getUsername()

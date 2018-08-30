@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2017 Tobias Brunner
+ * Copyright (C) 2012-2018 Tobias Brunner
  * Copyright (C) 2012 Giuliano Grassi
  * Copyright (C) 2012 Ralf Sager
  * HSR Hochschule fuer Technik Rapperswil
@@ -53,6 +53,8 @@ public class VpnProfileDataSource
 	public static final String KEY_SELECTED_APPS_LIST = "selected_apps_list";
 	public static final String KEY_NAT_KEEPALIVE = "nat_keepalive";
 	public static final String KEY_FLAGS = "flags";
+	public static final String KEY_IKE_PROPOSAL = "ike_proposal";
+	public static final String KEY_ESP_PROPOSAL = "esp_proposal";
 
 	private DatabaseHelper mDbHelper;
 	private SQLiteDatabase mDatabase;
@@ -61,7 +63,7 @@ public class VpnProfileDataSource
 	private static final String DATABASE_NAME = "strongswan.db";
 	private static final String TABLE_VPNPROFILE = "vpnprofile";
 
-	private static final int DATABASE_VERSION = 14;
+	private static final int DATABASE_VERSION = 16;
 
 	public static final DbColumn[] COLUMNS = new DbColumn[] {
 								new DbColumn(KEY_ID, "INTEGER PRIMARY KEY AUTOINCREMENT", 1),
@@ -84,6 +86,8 @@ public class VpnProfileDataSource
 								new DbColumn(KEY_SELECTED_APPS_LIST, "TEXT", 12),
 								new DbColumn(KEY_NAT_KEEPALIVE, "INTEGER", 13),
 								new DbColumn(KEY_FLAGS, "INTEGER", 14),
+								new DbColumn(KEY_IKE_PROPOSAL, "TEXT", 15),
+								new DbColumn(KEY_ESP_PROPOSAL, "TEXT", 15),
 							};
 
 	private static final String[] ALL_COLUMNS = getColumns(DATABASE_VERSION);
@@ -211,6 +215,33 @@ public class VpnProfileDataSource
 			{
 				db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + KEY_FLAGS +
 						   " INTEGER;");
+			}
+			if (oldVersion < 15)
+			{
+				db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + KEY_IKE_PROPOSAL +
+						   " TEXT;");
+				db.execSQL("ALTER TABLE " + TABLE_VPNPROFILE + " ADD " + KEY_ESP_PROPOSAL +
+						   " TEXT;");
+			}
+			if (oldVersion < 16)
+			{	/* add a UUID to all entries that haven't one yet */
+				db.beginTransaction();
+				try
+				{
+					Cursor cursor = db.query(TABLE_VPNPROFILE, ALL_COLUMNS, KEY_UUID + " is NULL", null, null, null, null);
+					for (cursor.moveToFirst(); !cursor.isAfterLast(); cursor.moveToNext())
+					{
+						ContentValues values = new ContentValues();
+						values.put(KEY_UUID, UUID.randomUUID().toString());
+						db.update(TABLE_VPNPROFILE, values, KEY_ID + " = " + cursor.getLong(cursor.getColumnIndex(KEY_ID)), null);
+					}
+					cursor.close();
+					db.setTransactionSuccessful();
+				}
+				finally
+				{
+					db.endTransaction();
+				}
 			}
 		}
 
@@ -351,6 +382,28 @@ public class VpnProfileDataSource
 	}
 
 	/**
+	 * Get a single VPN profile from the database by its UUID as String.
+	 * @param uuid the UUID of the VPN profile as String
+	 * @return the profile or null, if not found
+	 */
+	public VpnProfile getVpnProfile(String uuid)
+	{
+		try
+		{
+			if (uuid != null)
+			{
+				return getVpnProfile(UUID.fromString(uuid));
+			}
+			return null;
+		}
+		catch (IllegalArgumentException e)
+		{
+			e.printStackTrace();
+			return null;
+		}
+	}
+
+	/**
 	 * Get a list of all VPN profiles stored in the database.
 	 * @return list of VPN profiles
 	 */
@@ -374,7 +427,7 @@ public class VpnProfileDataSource
 	{
 		VpnProfile profile = new VpnProfile();
 		profile.setId(cursor.getLong(cursor.getColumnIndex(KEY_ID)));
-		profile.setUUID(getUUID(cursor, cursor.getColumnIndex(KEY_UUID)));
+		profile.setUUID(UUID.fromString(cursor.getString(cursor.getColumnIndex(KEY_UUID))));
 		profile.setName(cursor.getString(cursor.getColumnIndex(KEY_NAME)));
 		profile.setGateway(cursor.getString(cursor.getColumnIndex(KEY_GATEWAY)));
 		profile.setVpnType(VpnType.fromIdentifier(cursor.getString(cursor.getColumnIndex(KEY_VPN_TYPE))));
@@ -393,13 +446,15 @@ public class VpnProfileDataSource
 		profile.setSelectedApps(cursor.getString(cursor.getColumnIndex(KEY_SELECTED_APPS_LIST)));
 		profile.setNATKeepAlive(getInt(cursor, cursor.getColumnIndex(KEY_NAT_KEEPALIVE)));
 		profile.setFlags(getInt(cursor, cursor.getColumnIndex(KEY_FLAGS)));
+		profile.setIkeProposal(cursor.getString(cursor.getColumnIndex(KEY_IKE_PROPOSAL)));
+		profile.setEspProposal(cursor.getString(cursor.getColumnIndex(KEY_ESP_PROPOSAL)));
 		return profile;
 	}
 
 	private ContentValues ContentValuesFromVpnProfile(VpnProfile profile)
 	{
 		ContentValues values = new ContentValues();
-		values.put(KEY_UUID, profile.getUUID() != null ? profile.getUUID().toString() : null);
+		values.put(KEY_UUID, profile.getUUID().toString());
 		values.put(KEY_NAME, profile.getName());
 		values.put(KEY_GATEWAY, profile.getGateway());
 		values.put(KEY_VPN_TYPE, profile.getVpnType().getIdentifier());
@@ -418,24 +473,14 @@ public class VpnProfileDataSource
 		values.put(KEY_SELECTED_APPS_LIST, profile.getSelectedApps());
 		values.put(KEY_NAT_KEEPALIVE, profile.getNATKeepAlive());
 		values.put(KEY_FLAGS, profile.getFlags());
+		values.put(KEY_IKE_PROPOSAL, profile.getIkeProposal());
+		values.put(KEY_ESP_PROPOSAL, profile.getEspProposal());
 		return values;
 	}
 
 	private Integer getInt(Cursor cursor, int columnIndex)
 	{
 		return cursor.isNull(columnIndex) ? null : cursor.getInt(columnIndex);
-	}
-
-	private UUID getUUID(Cursor cursor, int columnIndex)
-	{
-		try
-		{
-			return cursor.isNull(columnIndex) ? null : UUID.fromString(cursor.getString(columnIndex));
-		}
-		catch (Exception e)
-		{
-			return null;
-		}
 	}
 
 	private static class DbColumn

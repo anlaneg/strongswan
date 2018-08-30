@@ -54,8 +54,6 @@ CONFIG_OPTS = \
 	--enable-imv-os \
 	--enable-imc-attestation \
 	--enable-imv-attestation \
-	--enable-imc-swid \
-	--enable-imv-swid \
 	--enable-imc-swima \
 	--enable-imv-swima \
 	--enable-imc-hcd \
@@ -103,7 +101,10 @@ CONFIG_OPTS = \
 	--enable-lookip \
 	--enable-bliss \
 	--enable-sha3 \
-	--enable-newhope
+	--enable-newhope \
+	--enable-systemd \
+	--enable-counters \
+	--enable-save-keys
 
 export ADA_PROJECT_PATH=/usr/local/ada/lib/gnat
 

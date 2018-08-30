@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2008-2015 Tobias Brunner
  * Copyright (C) 2007-2009 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -106,9 +106,9 @@ enum auth_rule_t {
 	AUTH_RULE_ECDSA_STRENGTH,
 	/** required BLISS public key strength, u_int in bits */
 	AUTH_RULE_BLISS_STRENGTH,
-	/** required signature scheme, signature_scheme_t */
+	/** required signature scheme, signature_params_t* */
 	AUTH_RULE_SIGNATURE_SCHEME,
-	/** required signature scheme for IKE authentication, signature_scheme_t */
+	/** required signature scheme for IKE authentication, signature_params_t* */
 	AUTH_RULE_IKE_SIGNATURE_SCHEME,
 	/** certificatePolicy constraint, numerical OID as char* */
 	AUTH_RULE_CERT_POLICY,

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2009 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -146,6 +146,15 @@ void command_register(command_t command)
 		fprintf(stderr, "unable to register command, please increase "
 				"MAX_COMMANDS\n");
 		return;
+	}
+	for (i = 0; i < MAX_COMMANDS && cmds[i].cmd; i++)
+	{
+		if (cmds[i].op == command.op)
+		{
+			fprintf(stderr, "unable to register command --%s, short option "
+					"conflicts with --%s\n", command.cmd, cmds[i].cmd);
+			return;
+		}
 	}
 
 	cmds[registered] = command;

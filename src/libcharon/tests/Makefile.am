@@ -3,7 +3,6 @@ TESTS = libcharon_tests exchange_tests
 check_PROGRAMS = $(TESTS)
 
 libcharon_tests_SOURCES = \
-  suites/test_proposal.c \
   suites/test_ike_cfg.c \
   suites/test_mem_pool.c \
   suites/test_message_chapoly.c \
@@ -36,6 +35,7 @@ exchange_tests_SOURCES = \
   utils/job_asserts.h \
   utils/mock_dh.h utils/mock_dh.c \
   utils/mock_ipsec.h utils/mock_ipsec.c \
+  utils/mock_net.h utils/mock_net.c \
   utils/mock_nonce_gen.h utils/mock_nonce_gen.c \
   utils/mock_sender.h utils/mock_sender.c \
   utils/sa_asserts.h \

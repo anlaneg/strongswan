@@ -2,7 +2,7 @@
  * Copyright (C) 2012-2015 Tobias Brunner
  * Copyright (C) 2005-2009 Martin Willi
  * Copyright (C) 2005 Jan Hutter
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -285,13 +285,18 @@ static bool load_cfg_candidates(private_ike_auth_t *this)
 {
 	enumerator_t *enumerator;
 	peer_cfg_t *peer_cfg;
+	ike_cfg_t *ike_cfg;
 	host_t *me, *other;
 	identification_t *my_id, *other_id;
+	proposal_t *ike_proposal;
+	bool private;
 
 	me = this->ike_sa->get_my_host(this->ike_sa);
 	other = this->ike_sa->get_other_host(this->ike_sa);
 	my_id = this->ike_sa->get_my_id(this->ike_sa);
 	other_id = this->ike_sa->get_other_id(this->ike_sa);
+	ike_proposal = this->ike_sa->get_proposal(this->ike_sa);
+	private = this->ike_sa->supports_extension(this->ike_sa, EXT_STRONGSWAN);
 
 	DBG1(DBG_CFG, "looking for peer configs matching %H[%Y]...%H[%Y]",
 		 me, my_id, other, other_id);
@@ -299,11 +304,18 @@ static bool load_cfg_candidates(private_ike_auth_t *this)
 											me, other, my_id, other_id, IKEV2);
 	while (enumerator->enumerate(enumerator, &peer_cfg))
 	{
+		/* ignore all configs that have no matching IKE proposal */
+		ike_cfg = peer_cfg->get_ike_cfg(peer_cfg);
+		if (!ike_cfg->has_proposal(ike_cfg, ike_proposal, private))
+		{
+			DBG2(DBG_CFG, "ignore candidate '%s' without matching IKE proposal",
+				 peer_cfg->get_name(peer_cfg));
+			continue;
+		}
 		peer_cfg->get_ref(peer_cfg);
 		if (this->peer_cfg == NULL)
 		{	/* best match */
 			this->peer_cfg = peer_cfg;
-			this->ike_sa->set_peer_cfg(this->ike_sa, peer_cfg);
 		}
 		else
 		{
@@ -313,6 +325,7 @@ static bool load_cfg_candidates(private_ike_auth_t *this)
 	enumerator->destroy(enumerator);
 	if (this->peer_cfg)
 	{
+		this->ike_sa->set_peer_cfg(this->ike_sa, this->peer_cfg);
 		DBG1(DBG_CFG, "selected peer config '%s'",
 			 this->peer_cfg->get_name(this->peer_cfg));
 		return TRUE;
@@ -369,7 +382,7 @@ static bool update_cfg_candidates(private_ike_auth_t *this, bool strict)
 			{
 				break;
 			}
-			DBG1(DBG_CFG, "selected peer config '%s' inacceptable: %s",
+			DBG1(DBG_CFG, "selected peer config '%s' unacceptable: %s",
 				 this->peer_cfg->get_name(this->peer_cfg), comply_error);
 			this->peer_cfg->destroy(this->peer_cfg);
 		}
@@ -471,7 +484,6 @@ METHOD(task_t, build_i, status_t,
 
 		if (idr && !idr->contains_wildcards(idr) &&
 			message->get_message_id(message) == 1 &&
-			this->peer_cfg->get_unique_policy(this->peer_cfg) != UNIQUE_NO &&
 			this->peer_cfg->get_unique_policy(this->peer_cfg) != UNIQUE_NEVER)
 		{
 			host_t *host;
@@ -604,7 +616,7 @@ METHOD(task_t, process_r, status_t,
 					(uintptr_t)cand->get(cand, AUTH_RULE_EAP_TYPE) == EAP_NAK &&
 					(uintptr_t)cand->get(cand, AUTH_RULE_EAP_VENDOR) == 0))
 			{	/* peer requested EAP, but current config does not match */
-				DBG1(DBG_IKE, "peer requested EAP, config inacceptable");
+				DBG1(DBG_IKE, "peer requested EAP, config unacceptable");
 				this->peer_cfg->destroy(this->peer_cfg);
 				this->peer_cfg = NULL;
 				if (!update_cfg_candidates(this, FALSE))

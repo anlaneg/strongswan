@@ -142,6 +142,11 @@ struct private_child_cfg_t {
 	 * anti-replay window size
 	 */
 	uint32_t replay_window;
+
+	/**
+	 * HW offload mode
+	 */
+	hw_offload_t hw_offload;
 };
 
 METHOD(child_cfg_t, get_name, char*,
@@ -224,6 +229,10 @@ METHOD(child_cfg_t, select_proposal, proposal_t*,
 	while (prefer_enum->enumerate(prefer_enum, &proposal))
 	{
 		proposal = proposal->clone(proposal);
+		if (strip_dh)
+		{
+			proposal->strip_dh(proposal, MODP_NONE);
+		}
 		if (prefer_self)
 		{
 			proposals->reset_enumerator(proposals, match_enum);
@@ -234,16 +243,18 @@ METHOD(child_cfg_t, select_proposal, proposal_t*,
 		}
 		while (match_enum->enumerate(match_enum, &match))
 		{
+			match = match->clone(match);
 			if (strip_dh)
 			{
-				proposal->strip_dh(proposal, MODP_NONE);
+				match->strip_dh(match, MODP_NONE);
 			}
 			selected = proposal->select(proposal, match, prefer_self, private);
+			match->destroy(match);
 			if (selected)
 			{
 				DBG2(DBG_CFG, "received proposals: %#P", proposals);
 				DBG2(DBG_CFG, "configured proposals: %#P", this->proposals);
-				DBG2(DBG_CFG, "selected proposal: %P", selected);
+				DBG1(DBG_CFG, "selected proposal: %P", selected);
 				break;
 			}
 		}
@@ -278,7 +289,7 @@ METHOD(child_cfg_t, add_traffic_selector, void,
 
 METHOD(child_cfg_t, get_traffic_selectors, linked_list_t*,
 	private_child_cfg_t *this, bool local, linked_list_t *supplied,
-	linked_list_t *hosts)
+	linked_list_t *hosts, bool log)
 {
 	enumerator_t *e1, *e2;
 	traffic_selector_t *ts1, *ts2, *selected;
@@ -323,13 +334,19 @@ METHOD(child_cfg_t, get_traffic_selectors, linked_list_t*,
 	}
 	e1->destroy(e1);
 
-	DBG2(DBG_CFG, "%s traffic selectors for %s:",
-		 supplied ? "selecting" : "proposing", local ? "us" : "other");
-	if (supplied == NULL)
+	if (log)
+	{
+		DBG2(DBG_CFG, "%s traffic selectors for %s:",
+			 supplied ? "selecting" : "proposing", local ? "us" : "other");
+	}
+	if (!supplied)
 	{
 		while (derived->remove_first(derived, (void**)&ts1) == SUCCESS)
 		{
-			DBG2(DBG_CFG, " %R", ts1);
+			if (log)
+			{
+				DBG2(DBG_CFG, " %R", ts1);
+			}
 			result->insert_last(result, ts1);
 		}
 		derived->destroy(derived);
@@ -347,11 +364,14 @@ METHOD(child_cfg_t, get_traffic_selectors, linked_list_t*,
 				selected = ts1->get_subset(ts1, ts2);
 				if (selected)
 				{
-					DBG2(DBG_CFG, " config: %R, received: %R => match: %R",
-						 ts1, ts2, selected);
+					if (log)
+					{
+						DBG2(DBG_CFG, " config: %R, received: %R => match: %R",
+							 ts1, ts2, selected);
+					}
 					result->insert_last(result, selected);
 				}
-				else
+				else if (log)
 				{
 					DBG2(DBG_CFG, " config: %R, received: %R => no match",
 						 ts1, ts2);
@@ -459,6 +479,12 @@ METHOD(child_cfg_t, get_start_action, action_t,
 	private_child_cfg_t *this)
 {
 	return this->start_action;
+}
+
+METHOD(child_cfg_t, get_hw_offload, hw_offload_t,
+	private_child_cfg_t *this)
+{
+	return this->hw_offload;
 }
 
 METHOD(child_cfg_t, get_dpd_action, action_t,
@@ -646,6 +672,7 @@ child_cfg_t *child_cfg_create(char *name, child_cfg_create_t *data)
 			.equals = _equals,
 			.get_ref = _get_ref,
 			.destroy = _destroy,
+			.get_hw_offload = _get_hw_offload,
 		},
 		.name = strdup(name),
 		.options = data->options,
@@ -668,6 +695,7 @@ child_cfg_t *child_cfg_create(char *name, child_cfg_create_t *data)
 		.other_ts = linked_list_create(),
 		.replay_window = lib->settings->get_int(lib->settings,
 							"%s.replay_window", DEFAULT_REPLAY_WINDOW, lib->ns),
+		.hw_offload = data->hw_offload,
 	);
 
 	return &this->public;

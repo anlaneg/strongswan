@@ -1,7 +1,7 @@
 %{
 /*
- * Copyright (C) 2014 Tobias Brunner
- * Hochschule fuer Technik Rapperswil
+ * Copyright (C) 2014-2018 Tobias Brunner
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -49,20 +49,34 @@ static void include_files(parser_helper_t *ctx);
 /* type of our extra data */
 %option extra-type="parser_helper_t*"
 
+/* state used to scan names */
+%x nam
+/* state used to scan values */
+%x val
 /* state used to scan include file patterns */
 %x inc
 /* state used to scan quoted strings */
 %x str
 
+/* pattern for section/key names */
+NAME [^#{}:,="\r\n\t ]
+
 %%
 
-[\t ]*#[^\n]*			/* eat comments */
-[\t ]+					/* eat whitespace */
-\n|#.*\n				return NEWLINE; /* also eats comments at the end of a line */
+[\t ]*#[^\r\n]*			/* eat comments */
+[\t\r ]+				/* eat whitespace */
+\n|#.*\n				/* eat newlines and comments at the end of a line */
 
 "{"						|
 "}"						|
-"="						return yytext[0];
+","						return yytext[0];
+
+":"						return REFS;
+
+"="						{
+	yy_push_state(val, yyscanner);
+	return yytext[0];
+}
 
 "include"[\t ]+/[^=]	{
 	yyextra->string_init(yyextra);
@@ -70,16 +84,87 @@ static void include_files(parser_helper_t *ctx);
 }
 
 "\""					{
-	yyextra->string_init(yyextra);
-	yy_push_state(str, yyscanner);
+	PARSER_DBG1(yyextra, "unexpected string detected");
+	return STRING_ERROR;
 }
 
-[^#{}="\n\t ]+			{
-	yylval->s = strdup(yytext);
-	return NAME;
+{NAME} {
+	yyextra->string_init(yyextra);
+	yyextra->string_add(yyextra, yytext);
+	yy_push_state(nam, yyscanner);
+}
+
+<nam>{
+	"::"				{
+		yyextra->string_add(yyextra, yytext+1);
+	}
+
+	{NAME}+ 			{
+		yyextra->string_add(yyextra, yytext);
+	}
+
+	<<EOF>>				|
+	.|[\r\n]			{
+		if (*yytext)
+		{
+			switch (yytext[0])
+			{
+				case '\n':
+					/* put the newline back to fix the line numbers */
+					unput('\n');
+					yy_set_bol(0);
+					break;
+				default:
+					/* these are parsed outside of this start condition */
+					unput(yytext[0]);
+					break;
+			}
+		}
+		yy_pop_state(yyscanner);
+		yylval->s = yyextra->string_get(yyextra);
+		return NAME;
+	}
+}
+
+<val>{
+	\r					/* just ignore these */
+	[\t ]+
+	<<EOF>>				|
+	[#}\n]				{
+		if (*yytext)
+		{
+			switch (yytext[0])
+			{
+				case '\n':
+					/* put the newline back to fix the line numbers */
+					unput('\n');
+					yy_set_bol(0);
+					break;
+				case '#':
+				case '}':
+					/* these are parsed outside of this start condition */
+					unput(yytext[0]);
+					break;
+			}
+		}
+		yy_pop_state(yyscanner);
+		return NEWLINE;
+	}
+
+	"\""				{
+		yyextra->string_init(yyextra);
+		yy_push_state(str, yyscanner);
+	}
+
+	/* same as above, but allow more characters */
+	[^#}"\r\n\t ]+		{
+		yylval->s = strdup(yytext);
+		return NAME;
+	}
 }
 
 <inc>{
+	\r					/* just ignore these */
 	/* we allow all characters except #, } and spaces, they can be escaped */
 	<<EOF>>				|
 	[#}\n\t ]			{
@@ -111,12 +196,13 @@ static void include_files(parser_helper_t *ctx);
 	\\["#} ]			{
 		yyextra->string_add(yyextra, yytext+1);
 	}
-	[^"\\#}\n\t ]+ {
+	[^"\\#}\r\n\t ]+ {
 		yyextra->string_add(yyextra, yytext);
 	}
 }
 
 <str>{
+	\r					/* just ignore these */
 	"\""				|
 	<<EOF>>				|
 	\\					{
@@ -138,12 +224,13 @@ static void include_files(parser_helper_t *ctx);
 			return STRING;
 		}
 	}
+
 	\\n     yyextra->string_add(yyextra, "\n");
 	\\r     yyextra->string_add(yyextra, "\r");
 	\\t     yyextra->string_add(yyextra, "\t");
-	\\\r?\n /* merge lines that end with EOL characters */
+	\\\r?\n /* merge lines that end with escaped EOL characters */
 	\\.     yyextra->string_add(yyextra, yytext+1);
-	[^\\"]+			{
+	[^\\\r"]+			{
 		yyextra->string_add(yyextra, yytext);
 	}
 }

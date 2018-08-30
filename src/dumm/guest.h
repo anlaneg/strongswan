@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2008-2009 Tobias Brunner
  * Copyright (C) 2007 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -47,7 +47,7 @@ enum guest_state_t {
 extern enum_name_t *guest_state_names;
 
 /**
- * Invoke function which lauches the UML guest.
+ * Invoke function which launches the UML guest.
  *
  * Consoles are all set to NULL, you may change them by adding additional UML
  * options to args before invocation.

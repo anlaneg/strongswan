@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2012-2013 Tobias Brunner
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -35,6 +35,12 @@ ENUM(ipcomp_transform_names, IPCOMP_NONE, IPCOMP_LZJH,
 	"IPCOMP_DEFLATE",
 	"IPCOMP_LZS",
 	"IPCOMP_LZJH"
+);
+
+ENUM(hw_offload_names, HW_OFFLOAD_NO, HW_OFFLOAD_AUTO,
+	"no",
+	"yes",
+	"auto",
 );
 
 /*
@@ -104,7 +110,10 @@ bool mark_from_string(const char *value, mark_t *mark)
 	{
 		mark->mask = 0xffffffff;
 	}
-	/* apply the mask to ensure the value is in range */
-	mark->value &= mark->mask;
+	if (!MARK_IS_UNIQUE(mark->value))
+	{
+		/* apply the mask to ensure the value is in range */
+		mark->value &= mark->mask;
+	}
 	return TRUE;
 }

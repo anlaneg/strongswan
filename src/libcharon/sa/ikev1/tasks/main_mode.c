@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011-2012 Tobias Brunner
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * Copyright (C) 2011 Martin Willi
  * Copyright (C) 2011 revosec AG
@@ -221,8 +221,7 @@ static void add_initial_contact(private_main_mode_t *this, message_t *message,
 	idr = this->ph1->get_id(this->ph1, this->peer_cfg, FALSE);
 	if (idr && !idr->contains_wildcards(idr))
 	{
-		if (this->peer_cfg->get_unique_policy(this->peer_cfg) != UNIQUE_NO &&
-			this->peer_cfg->get_unique_policy(this->peer_cfg) != UNIQUE_NEVER)
+		if (this->peer_cfg->get_unique_policy(this->peer_cfg) != UNIQUE_NEVER)
 		{
 			host = this->ike_sa->get_other_host(this->ike_sa);
 			if (!charon->ike_sa_manager->has_contact(charon->ike_sa_manager,

@@ -484,28 +484,94 @@ INSERT INTO products (			/* 81 */
  'Android 6.0.1'
 );
 
-INSERT INTO products (          /* 82 */
+INSERT INTO products (      /* 82 */
   name
 ) VALUES (
  'Debian 8.5 i686'
 );
 
-INSERT INTO products (          /* 83 */
+INSERT INTO products (      /* 83 */
   name
 ) VALUES (
  'Debian 8.5 x86_64'
 );
 
-INSERT INTO products (          /* 84 */
+INSERT INTO products (      /* 84 */
   name
 ) VALUES (
  'Debian 8.6 i686'
 );
 
-INSERT INTO products (          /* 85 */
+INSERT INTO products (      /* 85 */
   name
 ) VALUES (
  'Debian 8.6 x86_64'
+);
+
+INSERT INTO products (      /* 86 */
+  name
+) VALUES (
+ 'Debian 8.7 i686'
+);
+
+INSERT INTO products (      /* 87 */
+  name
+) VALUES (
+ 'Debian 8.7 x86_64'
+);
+
+INSERT INTO products (      /* 88 */
+  name
+) VALUES (
+ 'Debian 8.8 i686'
+);
+
+INSERT INTO products (      /* 89 */
+  name
+) VALUES (
+ 'Debian 8.8 x86_64'
+);
+
+INSERT INTO products (      /* 90 */
+  name
+) VALUES (
+ 'Debian 8.9 i686'
+);
+
+INSERT INTO products (      /* 91 */
+  name
+) VALUES (
+ 'Debian 8.9 x86_64'
+);
+
+INSERT INTO products (      /* 92 */
+  name
+) VALUES (
+ 'Debian 8.10 i686'
+);
+
+INSERT INTO products (      /* 93 */
+  name
+) VALUES (
+ 'Debian 8.10 x86_64'
+);
+
+INSERT INTO products (      /* 94 */
+  name
+) VALUES (
+ 'Debian 8.11 i686'
+);
+
+INSERT INTO products (      /* 95 */
+  name
+) VALUES (
+ 'Debian 8.11 x86_64'
+);
+
+INSERT INTO products (      /* 96 */
+  name
+) VALUES (
+ 'Ubuntu 18.04 x86_64'
 );
 
 /* Directories */
@@ -920,19 +986,19 @@ INSERT INTO groups (			/* 10 */
   'Ref. Linux', 8
 );
 
-INSERT INTO groups (            /* 11 */
+INSERT INTO groups (      /* 11 */
   name
 ) VALUES (
   'TPM BIOS'
 );
 
-INSERT INTO groups (            /* 12 */
+INSERT INTO groups (      /* 12 */
   name
 ) VALUES (
   'TPM IMA'
 );
 
-INSERT INTO groups (            /* 13 */
+INSERT INTO groups (      /* 13 */
   name
 ) VALUES (
   'TPM BIOS/IMA'
@@ -950,7 +1016,7 @@ INSERT INTO groups (			/* 15 */
   'Debian armv7l', 2
 );
 
-INSERT INTO groups (            /* 16 */
+INSERT INTO groups (      /* 16 */
   name
 ) VALUES (
   'TPM TBOOT'
@@ -1034,6 +1100,48 @@ INSERT INTO groups_product_defaults (
   group_id, product_id
 ) VALUES (
   4, 76
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  4, 82
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  4, 84
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  4, 86
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  4, 88
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  4, 90
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  4, 92
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  4, 94
 );
 
 INSERT INTO groups_product_defaults (
@@ -1124,6 +1232,36 @@ INSERT INTO groups_product_defaults (
   group_id, product_id
 ) VALUES (
   5, 85
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  5, 87
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  5, 89
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  5, 91
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  5, 93
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  5, 95
 );
 
 INSERT INTO groups_product_defaults (
@@ -1274,6 +1412,12 @@ INSERT INTO groups_product_defaults (
   group_id, product_id
 ) VALUES (
   7, 75
+);
+
+INSERT INTO groups_product_defaults (
+  group_id, product_id
+) VALUES (
+  7, 96
 );
 
 INSERT INTO groups_product_defaults (

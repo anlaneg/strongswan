@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2007 Martin Willi
- * Hochschule fuer Technik Rapperswil
+ * HSR Hochschule fuer Technik Rapperswil
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -136,7 +136,7 @@ typedef struct {
 } session_entry_t;
 
 /**
- * create a session and instanciate controllers
+ * create a session and instantiate controllers
  */
 static fast_session_t* load_session(private_fast_dispatcher_t *this)
 {
