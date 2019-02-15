@@ -261,27 +261,6 @@ static kernel_algorithm_t compression_algs[] = {
 };
 
 /**
- * IPsec HW offload state in kernel
- */
-typedef enum {
-	NL_OFFLOAD_UNKNOWN,
-	NL_OFFLOAD_UNSUPPORTED,
-	NL_OFFLOAD_SUPPORTED
-} nl_offload_state_t;
-
-/**
- * Global metadata used for IPsec HW offload
- */
-static struct {
-	/** bit in feature set */
-	u_int bit;
-	/** total number of device feature blocks */
-	u_int total_blocks;
-	/** determined HW offload state */
-	nl_offload_state_t state;
-} netlink_hw_offload;
-
-/**
  * Look up a kernel algorithm name and its key size
  */
 static const char* lookup_algorithm(transform_type_t type, int ikev2)
@@ -1131,7 +1110,7 @@ static void process_mapping(private_kernel_netlink_ipsec_t *this,
 static bool receive_events(private_kernel_netlink_ipsec_t *this, int fd,
 						   watcher_event_t event)
 {
-	char response[1024];
+	char response[netlink_get_buflen()];
 	struct nlmsghdr *hdr = (struct nlmsghdr*)response;
 	struct sockaddr_nl addr;
 	socklen_t addr_len = sizeof(addr);
@@ -1336,6 +1315,48 @@ static bool add_mark(struct nlmsghdr *hdr, int buflen, mark_t mark)
 }
 
 /**
+ * Add a uint32 attribute to message
+ */
+static bool add_uint32(struct nlmsghdr *hdr, int buflen,
+					   enum xfrm_attr_type_t type, uint32_t value)
+{
+	uint32_t *xvalue;
+
+	xvalue = netlink_reserve(hdr, buflen, type, sizeof(*xvalue));
+	if (!xvalue)
+	{
+		return FALSE;
+	}
+	*xvalue = value;
+	return TRUE;
+}
+
+/* ETHTOOL_GSSET_INFO is available since 2.6.34 and ETH_SS_FEATURES (enum) and
+ * ETHTOOL_GFEATURES since 2.6.39, so check for the latter */
+#ifdef ETHTOOL_GFEATURES
+
+/**
+ * IPsec HW offload state in kernel
+ */
+typedef enum {
+	NL_OFFLOAD_UNKNOWN,
+	NL_OFFLOAD_UNSUPPORTED,
+	NL_OFFLOAD_SUPPORTED
+} nl_offload_state_t;
+
+/**
+ * Global metadata used for IPsec HW offload
+ */
+static struct {
+	/** bit in feature set */
+	u_int bit;
+	/** total number of device feature blocks */
+	u_int total_blocks;
+	/** determined HW offload state */
+	nl_offload_state_t state;
+} netlink_hw_offload;
+
+/**
  * Check if kernel supports HW offload
  */
 static void netlink_find_offload_feature(const char *ifname, int query_socket)
@@ -1462,6 +1483,15 @@ out:
 	return ret;
 }
 
+#else
+
+static bool netlink_detect_offload(const char *ifname)
+{
+	return FALSE;
+}
+
+#endif
+
 /**
  * There are 3 HW offload configuration values:
  * 1. HW_OFFLOAD_NO   : Do not configure HW offload.
@@ -1586,6 +1616,49 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 	sa->id.proto = id->proto;
 	sa->family = id->src->get_family(id->src);
 	sa->mode = mode2kernel(mode);
+
+	if (!data->copy_df)
+	{
+		sa->flags |= XFRM_STATE_NOPMTUDISC;
+	}
+
+	if (!data->copy_ecn)
+	{
+		sa->flags |= XFRM_STATE_NOECN;
+	}
+
+	if (data->inbound)
+	{
+		switch (data->copy_dscp)
+		{
+			case DSCP_COPY_YES:
+			case DSCP_COPY_IN_ONLY:
+				sa->flags |= XFRM_STATE_DECAP_DSCP;
+				break;
+			default:
+				break;
+		}
+	}
+	else
+	{
+		switch (data->copy_dscp)
+		{
+			case DSCP_COPY_IN_ONLY:
+			case DSCP_COPY_NO:
+			{
+				/* currently the only extra flag */
+				if (!add_uint32(hdr, sizeof(request), XFRMA_SA_EXTRA_FLAGS,
+								XFRM_SA_XFLAG_DONT_ENCAP_DSCP))
+				{
+					goto failed;
+				}
+				break;
+			}
+			default:
+				break;
+		}
+	}
+
 	switch (mode)
 	{
 		case MODE_TUNNEL:
@@ -1829,17 +1902,23 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 		goto failed;
 	}
 
-	if (data->tfc && id->proto == IPPROTO_ESP && mode == MODE_TUNNEL)
-	{	/* the kernel supports TFC padding only for tunnel mode ESP SAs */
-		uint32_t *tfcpad;
-
-		tfcpad = netlink_reserve(hdr, sizeof(request), XFRMA_TFCPAD,
-								 sizeof(*tfcpad));
-		if (!tfcpad)
+	if (ipcomp == IPCOMP_NONE && (data->mark.value | data->mark.mask))
+	{
+		if (!add_uint32(hdr, sizeof(request), XFRMA_SET_MARK,
+						data->mark.value) ||
+			!add_uint32(hdr, sizeof(request), XFRMA_SET_MARK_MASK,
+						data->mark.mask))
 		{
 			goto failed;
 		}
-		*tfcpad = data->tfc;
+	}
+
+	if (data->tfc && id->proto == IPPROTO_ESP && mode == MODE_TUNNEL)
+	{	/* the kernel supports TFC padding only for tunnel mode ESP SAs */
+		if (!add_uint32(hdr, sizeof(request), XFRMA_TFCPAD, data->tfc))
+		{
+			goto failed;
+		}
 	}
 
 	if (id->proto != IPPROTO_COMP)
@@ -2191,6 +2270,7 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	uint32_t replay_esn_len = 0;
 	kernel_ipsec_del_sa_t del = { 0 };
 	status_t status = FAILED;
+	traffic_selector_t *ts;
 	char markstr[32] = "";
 
 	/* if IPComp is used, we first update the IPComp SA */
@@ -2294,10 +2374,26 @@ METHOD(kernel_ipsec_t, update_sa, status_t,
 	if (!id->src->ip_equals(id->src, data->new_src))
 	{
 		host2xfrm(data->new_src, &sa->saddr);
+
+		ts = selector2ts(&sa->sel, TRUE);
+		if (ts && ts->is_host(ts, id->src))
+		{
+			ts->set_address(ts, data->new_src);
+			ts2subnet(ts, &sa->sel.saddr, &sa->sel.prefixlen_s);
+		}
+		DESTROY_IF(ts);
 	}
 	if (!id->dst->ip_equals(id->dst, data->new_dst))
 	{
 		host2xfrm(data->new_dst, &sa->id.daddr);
+
+		ts = selector2ts(&sa->sel, FALSE);
+		if (ts && ts->is_host(ts, id->dst))
+		{
+			ts->set_address(ts, data->new_dst);
+			ts2subnet(ts, &sa->sel.daddr, &sa->sel.prefixlen_d);
+		}
+		DESTROY_IF(ts);
 	}
 
 	rta = XFRM_RTA(out_hdr, struct xfrm_usersa_info);

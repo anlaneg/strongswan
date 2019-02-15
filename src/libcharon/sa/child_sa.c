@@ -890,11 +890,20 @@ static status_t install_internal(private_child_sa_t *this, chunk_t encr,
 		.cpi = cpi,
 		.encap = this->encap,
 		.hw_offload = this->config->get_hw_offload(this->config),
+		.mark = this->config->get_set_mark(this->config, inbound),
 		.esn = esn,
+		.copy_df = !this->config->has_option(this->config, OPT_NO_COPY_DF),
+		.copy_ecn = !this->config->has_option(this->config, OPT_NO_COPY_ECN),
+		.copy_dscp = this->config->get_copy_dscp(this->config),
 		.initiator = initiator,
 		.inbound = inbound,
 		.update = update,
 	};
+
+	if (sa.mark.value == MARK_SAME)
+	{
+		sa.mark.value = inbound ? this->mark_in.value : this->mark_out.value;
+	}
 
 	status = charon->kernel->add_sa(charon->kernel, &id, &sa);
 
@@ -969,7 +978,7 @@ static void prepare_sa_cfg(private_child_sa_t *this, ipsec_sa_cfg_t *my_sa,
 }
 
 /**
- * Install inbound policie(s): in, fwd
+ * Install inbound policies: in, fwd
  */
 static status_t install_policies_inbound(private_child_sa_t *this,
 	host_t *my_addr, host_t *other_addr, traffic_selector_t *my_ts,
@@ -1003,7 +1012,7 @@ static status_t install_policies_inbound(private_child_sa_t *this,
 }
 
 /**
- * Install outbound policie(s): out, [fwd]
+ * Install outbound policies: out, [fwd]
  */
 static status_t install_policies_outbound(private_child_sa_t *this,
 	host_t *my_addr, host_t *other_addr, traffic_selector_t *my_ts,

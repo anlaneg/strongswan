@@ -270,6 +270,38 @@ static void handle_supported_hash_algorithms(private_ike_init_t *this,
 }
 
 /**
+ * Check whether to send a USE_PPK notify
+ */
+static bool send_use_ppk(private_ike_init_t *this)
+{
+	peer_cfg_t *peer;
+	enumerator_t *keys;
+	shared_key_t *key;
+	bool use_ppk = FALSE;
+
+	if (this->initiator)
+	{
+		peer = this->ike_sa->get_peer_cfg(this->ike_sa);
+		if (peer->get_ppk_id(peer))
+		{
+			use_ppk = TRUE;
+		}
+	}
+	else if (this->ike_sa->supports_extension(this->ike_sa, EXT_PPK))
+	{
+		/* check if we have at least one PPK available */
+		keys = lib->credmgr->create_shared_enumerator(lib->credmgr, SHARED_PPK,
+													  NULL, NULL);
+		if (keys->enumerate(keys, &key, NULL, NULL))
+		{
+			use_ppk = TRUE;
+		}
+		keys->destroy(keys);
+	}
+	return use_ppk;
+}
+
+/**
  * build the payloads for the message
  */
 static bool build_payloads(private_ike_init_t *this, message_t *message)
@@ -330,8 +362,6 @@ static bool build_payloads(private_ike_init_t *this, message_t *message)
 	}
 	message->add_payload(message, (payload_t*)sa_payload);
 
-	nonce_payload = nonce_payload_create(PLV2_NONCE);
-	nonce_payload->set_nonce(nonce_payload, this->my_nonce);
 	ke_payload = ke_payload_create_from_diffie_hellman(PLV2_KEY_EXCHANGE,
 													   this->dh);
 	if (!ke_payload)
@@ -339,6 +369,8 @@ static bool build_payloads(private_ike_init_t *this, message_t *message)
 		DBG1(DBG_IKE, "creating KE payload failed");
 		return FALSE;
 	}
+	nonce_payload = nonce_payload_create(PLV2_NONCE);
+	nonce_payload->set_nonce(nonce_payload, this->my_nonce);
 
 	if (this->old_sa)
 	{	/* payload order differs if we are rekeying */
@@ -395,6 +427,11 @@ static bool build_payloads(private_ike_init_t *this, message_t *message)
 			message->add_notify(message, FALSE, REDIRECT_SUPPORTED,
 								chunk_empty);
 		}
+	}
+	/* notify the peer if we want to use/support PPK */
+	if (!this->old_sa && send_use_ppk(this))
+	{
+		message->add_notify(message, FALSE, USE_PPK, chunk_empty);
 	}
 	return TRUE;
 }
@@ -508,6 +545,13 @@ static void process_payloads(private_ike_init_t *this, message_t *message)
 						if (this->signature_authentication)
 						{
 							handle_supported_hash_algorithms(this, notify);
+						}
+						break;
+					case USE_PPK:
+						if (!this->old_sa)
+						{
+							this->ike_sa->enable_extension(this->ike_sa,
+														   EXT_PPK);
 						}
 						break;
 					case REDIRECTED_FROM:
@@ -729,7 +773,7 @@ static bool derive_keys(private_ike_init_t *this,
 		return FALSE;
 	}
 	charon->bus->ike_keys(charon->bus, this->ike_sa, this->dh, chunk_empty,
-						  nonce_i, nonce_r, this->old_sa, NULL);
+						  nonce_i, nonce_r, this->old_sa, NULL, AUTH_NONE);
 	return TRUE;
 }
 
@@ -846,6 +890,20 @@ METHOD(task_t, pre_process_i, status_t,
 
 			switch (type)
 			{
+				case COOKIE:
+				{
+					chunk_t cookie;
+
+					cookie = notify->get_notification_data(notify);
+					if (chunk_equals(cookie, this->cookie))
+					{
+						DBG1(DBG_IKE, "ignore response with duplicate COOKIE "
+							 "notify");
+						enumerator->destroy(enumerator);
+						return FAILED;
+					}
+					break;
+				}
 				case REDIRECT:
 				{
 					identification_t *gateway;

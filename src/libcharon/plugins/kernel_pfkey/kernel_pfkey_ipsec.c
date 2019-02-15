@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2017 Tobias Brunner
+ * Copyright (C) 2008-2018 Tobias Brunner
  * Copyright (C) 2008 Andreas Steffen
  * HSR Hochschule fuer Technik Rapperswil
  *
@@ -1287,20 +1287,27 @@ static void process_acquire(private_kernel_pfkey_ipsec_t *this,
 		return;
 	}
 
-	index = response.x_policy->sadb_x_policy_id;
-	this->mutex->lock(this->mutex);
-	if (this->policies->find_first(this->policies, policy_entry_match_byindex,
-								  (void**)&policy, index) &&
-		policy->used_by->get_first(policy->used_by, (void**)&sa) == SUCCESS)
+	if (response.x_sa2)
 	{
-		reqid = sa->sa->cfg.reqid;
+		reqid = response.x_sa2->sadb_x_sa2_reqid;
 	}
 	else
 	{
-		DBG1(DBG_KNL, "received an SADB_ACQUIRE with policy id %d but no "
-					  "matching policy found", index);
+		index = response.x_policy->sadb_x_policy_id;
+		this->mutex->lock(this->mutex);
+		if (this->policies->find_first(this->policies, policy_entry_match_byindex,
+									   (void**)&policy, index) &&
+			policy->used_by->get_first(policy->used_by, (void**)&sa) == SUCCESS)
+		{
+			reqid = sa->sa->cfg.reqid;
+		}
+		else
+		{
+			DBG1(DBG_KNL, "received an SADB_ACQUIRE with policy id %d but no "
+				 "matching policy found", index);
+		}
+		this->mutex->unlock(this->mutex);
 	}
-	this->mutex->unlock(this->mutex);
 
 	src_ts = sadb_address2ts(response.src);
 	dst_ts = sadb_address2ts(response.dst);
@@ -2739,7 +2746,7 @@ METHOD(kernel_ipsec_t, add_policy, status_t,
 	if (update && current_sa)
 	{	/* check if there are actually any relevant changes, if not, we don't
 		 * send an update to the kernel as e.g. FreeBSD doesn't do that
-		 * atomically, causing unecessary traffic loss during rekeyings */
+		 * atomically, causing unnecessary traffic loss during rekeyings */
 		update = policy_update_required(current_sa, assigned_sa);
 	}
 
@@ -2948,7 +2955,7 @@ METHOD(kernel_ipsec_t, del_policy, status_t,
 		if (is_installed)
 		{	/* check if there are actually any relevant changes, if not, we do
 			 * not send an update to the kernel as e.g. FreeBSD doesn't do that
-			 * atomically, causing unecessary traffic loss during rekeyings */
+			 * atomically, causing unnecessary traffic loss during rekeyings */
 			policy->used_by->get_first(policy->used_by, (void**)&mapping);
 			is_installed = policy_update_required(mapping, to_remove);
 		}

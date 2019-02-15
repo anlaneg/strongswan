@@ -156,6 +156,11 @@ enum ike_extension_t {
 	 * IKEv2 Message ID sync, RFC 6311
 	 */
 	EXT_IKE_MESSAGE_ID_SYNC = (1<<14),
+
+	/**
+	 * Postquantum Preshared Keys, draft-ietf-ipsecme-qr-ikev2
+	 */
+	EXT_PPK = (1<<15),
 };
 
 /**
@@ -227,6 +232,11 @@ enum ike_condition_t {
 	 * Online certificate revocation checking is suspended for this IKE_SA
 	 */
 	COND_ONLINE_VALIDATION_SUSPENDED = (1<<12),
+
+	/**
+	 * A Postquantum Preshared Key was used when this IKE_SA was created
+	 */
+	COND_PPK = (1<<13),
 };
 
 /**
@@ -1115,6 +1125,16 @@ struct ike_sa_t {
 	enumerator_t* (*create_task_enumerator)(ike_sa_t *this, task_queue_t queue);
 
 	/**
+	 * Remove the task the given enumerator points to.
+	 *
+	 * @note This should be used with caution, in partciular, for tasks in the
+	 * active and passive queues.
+	 *
+	 * @param enumerator	enumerator created with the method above
+	 */
+	void (*remove_task)(ike_sa_t *this, enumerator_t *enumerator);
+
+	/**
 	 * Flush a task queue, cancelling all tasks in it.
 	 *
 	 * @param queue			queue type to flush
@@ -1136,6 +1156,13 @@ struct ike_sa_t {
 	 * @param delay			minimum delay in s before initiating the task
 	 */
 	void (*queue_task_delayed)(ike_sa_t *this, task_t *task, uint32_t delay);
+
+	/**
+	 * Adopt child creating tasks from the given IKE_SA.
+	 *
+	 * @param other			other IKE_SA to adopt tasks from
+	 */
+	void (*adopt_child_tasks)(ike_sa_t *this, ike_sa_t *other);
 
 	/**
 	 * Inherit required attributes to new SA before rekeying.

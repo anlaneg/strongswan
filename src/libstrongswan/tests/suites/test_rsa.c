@@ -40,7 +40,7 @@ static signature_scheme_t schemes[] = {
 static rsa_pss_params_t default_pss_params = {
 	.hash = HASH_SHA256,
 	.mgf1_hash = HASH_SHA256,
-	.salt_len = RSA_PSS_SALT_LEN_DEFAULT,
+	.salt_len = HASH_SIZE_SHA256,
 };
 
 /**
@@ -146,7 +146,7 @@ static void test_bad_sigs(public_key_t *pubkey)
  * RSA key sizes to test
  */
 static int key_sizes[] = {
-	768, 1024, 1536, 2048, 3072, 4096,
+	1024, 1536, 2048, 3072, 4096,
 };
 
 START_TEST(test_gen)

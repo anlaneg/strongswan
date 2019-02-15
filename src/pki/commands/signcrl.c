@@ -124,7 +124,7 @@ static int sign_crl()
 	char *arg, *cacert = NULL, *cakey = NULL, *lastupdate = NULL, *error = NULL;
 	char *basecrl = NULL;
 	char serial[512], *keyid = NULL;
-	int serial_len = 0;
+	int serial_len;
 	crl_reason_t reason = CRL_REASON_UNSPECIFIED;
 	time_t thisUpdate, nextUpdate, date = time(NULL);
 	time_t lifetime = 15 * 24 * 60 * 60;
@@ -204,7 +204,6 @@ static int sign_crl()
 				}
 				add_revoked(list, chunk_create(serial, serial_len), reason, date);
 				date = time(NULL);
-				serial_len = 0;
 				reason = CRL_REASON_UNSPECIFIED;
 				continue;
 			case 's':
@@ -222,7 +221,6 @@ static int sign_crl()
 				serial_len = chunk.len;
 				add_revoked(list, chunk_create(serial, serial_len), reason, date);
 				date = time(NULL);
-				serial_len = 0;
 				reason = CRL_REASON_UNSPECIFIED;
 				continue;
 			}
@@ -401,6 +399,12 @@ static int sign_crl()
 	chunk_increment(crl_serial);
 
 	scheme = get_signature_scheme(private, digest, pss);
+	if (!scheme)
+	{
+		error = "no signature scheme found";
+		goto error;
+	}
+
 	enumerator = enumerator_create_filter(list->create_enumerator(list),
 										  filter, NULL, NULL);
 	crl = lib->creds->create(lib->creds, CRED_CERTIFICATE, CERT_X509_CRL,

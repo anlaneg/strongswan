@@ -19,7 +19,7 @@
 #  initialize & set some vars
 # ============================
 
-AC_INIT([strongSwan],[5.7.0dr8])
+AC_INIT([strongSwan],[5.7.2])
 AM_INIT_AUTOMAKE(m4_esyscmd([
 	echo tar-ustar
 	echo subdir-objects
@@ -126,6 +126,7 @@ ARG_DISBL_SET([aes],            [disable AES software implementation plugin.])
 ARG_ENABL_SET([af-alg],         [enable AF_ALG crypto interface to Linux Crypto API.])
 ARG_ENABL_SET([bliss],          [enable BLISS software implementation plugin.])
 ARG_ENABL_SET([blowfish],       [enable Blowfish software implementation plugin.])
+ARG_ENABL_SET([botan],          [enables the Botan crypto plugin.])
 ARG_ENABL_SET([ccm],            [enables the CCM AEAD wrapper crypto plugin.])
 ARG_ENABL_SET([chapoly],        [enables the ChaCha20/Poly1305 AEAD plugin.])
 ARG_DISBL_SET([cmac],           [disable CMAC crypto implementation plugin.])
@@ -280,7 +281,6 @@ ARG_ENABL_SET([aikgen],         [enable AIK generator for TPM 1.2.])
 ARG_DISBL_SET([charon],         [disable the IKEv1/IKEv2 keying daemon charon.])
 ARG_ENABL_SET([cmd],            [enable the command line IKE client charon-cmd.])
 ARG_ENABL_SET([conftest],       [enforce Suite B conformance test framework.])
-ARG_ENABL_SET([dumm],           [enable the DUMM UML test framework.])
 ARG_ENABL_SET([fast],           [enable libfast (FastCGI Application Server w/ templates.])
 ARG_ENABL_SET([fuzzing],        [enable fuzzing scripts (found in directory fuzz).])
 ARG_ENABL_SET([libipsec],       [enable user space IPsec implementation.])
@@ -1051,18 +1051,6 @@ if test x$imc_swima = xtrue -o $imv_swima = xtrue; then
 	AC_SUBST(json_LIBS)
 fi
 
-if test x$dumm = xtrue; then
-	PKG_CHECK_MODULES(gtk, [gtk+-2.0 vte])
-	AC_SUBST(gtk_CFLAGS)
-	AC_SUBST(gtk_LIBS)
-	AC_CHECK_PROGS(RUBY, ruby)
-	PKG_CHECK_MODULES(ruby, [ruby])
-	saved_LIBS=$LIBS
-	LIBS=$ruby_LIBS
-	AC_CHECK_FUNCS(rb_errinfo)
-	LIBS=$saved_LIBS
-fi
-
 if test x$fast = xtrue; then
 	AC_CHECK_LIB([neo_utl],[hdf_init],[LIBS="$LIBS"],[AC_MSG_ERROR([ClearSilver library neo_utl not found!])],[])
 	AC_MSG_CHECKING([for -lneo_cgi and dependencies])
@@ -1160,6 +1148,12 @@ if test x$gcrypt = xtrue; then
 		 AC_DEFINE([HAVE_GCRY_CIPHER_CAMELLIA], [], [have GCRY_CIPHER_CAMELLIA128])],
 		[AC_MSG_RESULT([no])]
 	)
+fi
+
+if test x$botan = xtrue; then
+	PKG_CHECK_MODULES(botan, [botan-2])
+	AC_SUBST(botan_CFLAGS)
+	AC_SUBST(botan_LIBS)
 fi
 
 if test x$uci = xtrue; then
@@ -1298,6 +1292,9 @@ if test x$fuzzing = xtrue; then
 	else
 		# required for libFuzzer
 		FUZZING_LDFLAGS="-stdlib=libc++ -lstdc++"
+		if test "$SANITIZER" = "coverage"; then
+			FUZZING_LDFLAGS="$FUZZING_LDFLAGS -lm"
+		fi
 		AC_SUBST(FUZZING_LDFLAGS)
 	fi
 fi
@@ -1412,6 +1409,7 @@ ADD_PLUGIN([pem],                  [s charon scepclient pki scripts manager meds
 ADD_PLUGIN([padlock],              [s charon])
 ADD_PLUGIN([openssl],              [s charon scepclient pki scripts manager medsrv attest nm cmd aikgen])
 ADD_PLUGIN([gcrypt],               [s charon scepclient pki scripts manager medsrv attest nm cmd aikgen])
+ADD_PLUGIN([botan],                [s charon scepclient pki scripts manager medsrv attest nm cmd aikgen])
 ADD_PLUGIN([af-alg],               [s charon scepclient pki scripts medsrv attest nm cmd aikgen])
 ADD_PLUGIN([fips-prf],             [s charon nm cmd])
 ADD_PLUGIN([gmp],                  [s charon scepclient pki scripts manager medsrv attest nm cmd aikgen fuzz])
@@ -1581,6 +1579,7 @@ AM_CONDITIONAL(USE_SQLITE, test x$sqlite = xtrue)
 AM_CONDITIONAL(USE_PADLOCK, test x$padlock = xtrue)
 AM_CONDITIONAL(USE_OPENSSL, test x$openssl = xtrue)
 AM_CONDITIONAL(USE_GCRYPT, test x$gcrypt = xtrue)
+AM_CONDITIONAL(USE_BOTAN, test x$botan = xtrue)
 AM_CONDITIONAL(USE_AGENT, test x$agent = xtrue)
 AM_CONDITIONAL(USE_KEYCHAIN, test x$keychain = xtrue)
 AM_CONDITIONAL(USE_PKCS11, test x$pkcs11 = xtrue)
@@ -1691,7 +1690,6 @@ AM_CONDITIONAL(USE_COUNTERS, test x$counters = xtrue)
 # ---------------
 AM_CONDITIONAL(USE_LEAK_DETECTIVE, test x$leak_detective = xtrue)
 AM_CONDITIONAL(USE_LOCK_PROFILER, test x$lock_profiler = xtrue)
-AM_CONDITIONAL(USE_DUMM, test x$dumm = xtrue)
 AM_CONDITIONAL(USE_FAST, test x$fast = xtrue)
 AM_CONDITIONAL(USE_MANAGER, test x$manager = xtrue)
 AM_CONDITIONAL(USE_ME, test x$mediation = xtrue)
@@ -1860,6 +1858,7 @@ AC_CONFIG_FILES([
 	src/libstrongswan/plugins/padlock/Makefile
 	src/libstrongswan/plugins/openssl/Makefile
 	src/libstrongswan/plugins/gcrypt/Makefile
+	src/libstrongswan/plugins/botan/Makefile
 	src/libstrongswan/plugins/agent/Makefile
 	src/libstrongswan/plugins/keychain/Makefile
 	src/libstrongswan/plugins/pkcs11/Makefile
@@ -2001,8 +2000,6 @@ AC_CONFIG_FILES([
 	src/pki/Makefile
 	src/pki/man/Makefile
 	src/pool/Makefile
-	src/dumm/Makefile
-	src/dumm/ext/extconf.rb
 	src/libfast/Makefile
 	src/manager/Makefile
 	src/medsrv/Makefile

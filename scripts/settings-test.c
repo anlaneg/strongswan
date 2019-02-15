@@ -73,7 +73,7 @@ static void print_section(section_t *section, int level)
 				printf("%s%s", j == 0 ? " : " : ", ", ref->name);
 			}
 		}
-		printf(" {\n", indent);
+		printf(" {\n");
 		print_section(sub, level + 1);
 		printf("%s}\n", indent);
 	}
@@ -81,7 +81,6 @@ static void print_section(section_t *section, int level)
 
 /**
  * Recursively print a given section and all subsections/settings
- * FIXME: Doesn't work properly if any of the keys contain dots
  */
 static void print_settings_section(settings_t *settings, char *section,
 								   int level)

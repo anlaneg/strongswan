@@ -499,8 +499,6 @@ static void load_file_logger(private_daemon_t *this, char *section,
 						"%s.filelog.%s.flush_line", FALSE, lib->ns, section);
 	append = lib->settings->get_bool(lib->settings,
 						"%s.filelog.%s.append", TRUE, lib->ns, section);
-	time_format = lib->settings->get_str(lib->settings,
-						"%s.filelog.%s.time_format", NULL, lib->ns, section);
 	filename = lib->settings->get_str(lib->settings,
 						"%s.filelog.%s.path", section, lib->ns, section);
 
@@ -548,6 +546,10 @@ static void load_custom_logger(private_daemon_t *this,
 		custom_logger->set_level(custom_logger, group,
 				lib->settings->get_int(lib->settings, "%s.customlog.%s.%N", def,
 							lib->ns, entry->name, debug_lower_names, group));
+	}
+	if (custom_logger->reload)
+	{
+		custom_logger->reload(custom_logger);
 	}
 	charon->bus->add_logger(charon->bus, &custom_logger->logger);
 }

@@ -1967,6 +1967,8 @@ static void adopt_children_and_vips(ike_sa_t *old, ike_sa_t *new)
 	}
 	enumerator->destroy(enumerator);
 
+	new->adopt_child_tasks(new, old);
+
 	enumerator = old->create_virtual_ip_enumerator(old, FALSE);
 	while (enumerator->enumerate(enumerator, &vip))
 	{
@@ -2015,6 +2017,8 @@ static status_t enforce_replace(private_ike_sa_manager_t *this,
 		 * CHILD_SAs to keep connectivity up. */
 		lib->scheduler->schedule_job(lib->scheduler, (job_t*)
 			delete_ike_sa_job_create(duplicate->get_id(duplicate), TRUE), 10);
+		DBG1(DBG_IKE, "schedule delete of duplicate IKE_SA for peer '%Y' due "
+			 "to uniqueness policy and suspected reauthentication", other);
 		return SUCCESS;
 	}
 	DBG1(DBG_IKE, "deleting duplicate IKE_SA for peer '%Y' due to "
